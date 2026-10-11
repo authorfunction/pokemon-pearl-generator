@@ -1,0 +1,16 @@
+# Cloned upstream sprite repositories (sparse checkouts)
+pokesprite/
+pokemon-colorscripts/
+
+# Python cache & virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride

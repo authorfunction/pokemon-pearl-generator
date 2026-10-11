@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pokémon Sprites for 29×29 Boards</title>
+  <style>
+    body { font-family: sans-serif; background: #181818; color: #eee; padding: 20px; }
+    header { margin-bottom: 20px; }
+    input { padding: 8px 12px; background: #282828; border: 1px solid #444; color: #fff; border-radius: 4px; }
+    #grid { display: flex; flex-wrap: wrap; gap: 15px; }
+    .card { background: #242424; border: 1px solid #333; padding: 10px; border-radius: 6px; text-align: center; }
+    canvas { background: #000; image-rendering: pixelated; margin-top: 8px; border: 1px solid #333; }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Pokémon Sprites for 29×29 Boards</h2>
+    <input type="text" id="search" placeholder="Search Pokémon..." oninput="filterCards()" />
+    <span id="counter" style="margin-left: 10px; color: #aaa;">Loading...</span>
+  </header>
+
+  <div id="grid"></div>
+
+  <script>
+    let allSprites = [];
+
+    async function init() {
+      const counter = document.getElementById('counter');
+      try {
+        const res = await fetch('sprites_29x29.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}: Run python script first.`);
+        
+        allSprites = await res.json();
+        counter.innerText = `${allSprites.length} sprites fitting 29×29 available.`;
+        renderGrid(allSprites);
+      } catch (err) {
+        counter.innerText = `Error: ${err.message}`;
+      }
+    }
+
+    function renderGrid(list) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<div><strong>${item.name}</strong></div><small style="color:#888">${item.w}×${item.h} beads</small><br>`;
+
+        const canvas = document.createElement('canvas');
+        const beadSize = 5;
+        canvas.width = item.w * beadSize;
+        canvas.height = item.h * beadSize;
+        const ctx = canvas.getContext('2d');
+
+        const pixels = parseAnsiToPixels(item.data);
+        pixels.forEach((row, y) => {
+          row.forEach((pixel, x) => {
+            if (pixel) {
+              ctx.fillStyle = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+              ctx.fillRect(x * beadSize, y * beadSize, beadSize - 1, beadSize - 1);
+            }
+          });
+        });
+
+        card.appendChild(canvas);
+        grid.appendChild(card);
+      });
+    }
+
+    function filterCards() {
+      const q = document.getElementById('search').value.toLowerCase();
+      const filtered = allSprites.filter(s => s.name.toLowerCase().includes(q));
+      renderGrid(filtered);
+    }
+
+    function parseAnsiToPixels(ansiText) {
+      const lines = ansiText.split('\n');
+      const tokenRegex = /\x1b\[([0-9;]*)m|([^\x1b])/g;
+      const pixels = [];
+
+      lines.forEach(line => {
+        let match, fg = null, bg = null;
+        const topRow = [], botRow = [];
+
+        while ((match = tokenRegex.exec(line)) !== null) {
+          if (match[1] !== undefined) {
+            const args = match[1].split(';').map(Number);
+            if (args[0] === 0 || match[1] === '') { fg = null; bg = null; }
+            else if (args[0] === 38 && args[1] === 2) { fg = [args[2], args[3], args[4]]; }
+            else if (args[0] === 48 && args[1] === 2) { bg = [args[2], args[3], args[4]]; }
+          } else if (match[2] !== undefined) {
+            const char = match[2];
+            if (char === '▀') { topRow.push(fg); botRow.push(bg); }
+            else if (char === '▄') { topRow.push(bg); botRow.push(fg); }
+            else if (char === ' ') { topRow.push(bg); botRow.push(bg); }
+          }
+        }
+        if (topRow.length > 0) pixels.push(topRow);
+        if (botRow.length > 0) pixels.push(botRow);
+      });
+
+      return pixels;
+    }
+
+    init();
+  </script>
+</body>
+</html>

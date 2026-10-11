@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PokéSprite 29×29 Bead Art Maker</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #121212; color: #eee; padding: 20px; margin: 0; }
+    header { background: #1e1e1e; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; display: flex; align-items: center; justify-content: space-between; }
+    h1 { margin: 0; font-size: 1.5rem; color: #ffcb05; }
+    .controls { display: flex; gap: 15px; align-items: center; }
+    input { background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 6px 12px; border-radius: 4px; font-size: 0.95rem; }
+    #grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .card { background: #1e1e1e; border: 1px solid #333; padding: 10px; border-radius: 8px; text-align: center; width: 160px; }
+    .sprite-name { font-weight: bold; text-transform: capitalize; margin-bottom: 4px; font-size: 0.95rem; }
+    .dimensions { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
+    canvas { background: #000; image-rendering: pixelated; border-radius: 4px; border: 1px solid #333; display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>PokéSprite Bead Art Maker (≤ 29×29)</h1>
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search Pokémon..." oninput="filterSprites()" />
+      <span id="status" style="color: #aaa; font-size: 0.9rem;">Loading...</span>
+    </div>
+  </header>
+
+  <div id="grid"></div>
+
+  <script>
+    let allSprites = [];
+    const scale = 5; // Bead pixel size
+
+    async function loadData() {
+      const status = document.getElementById('status');
+      try {
+        const res = await fetch('pokesprite_29x29.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}: Run the Python generator script first.`);
+        allSprites = await res.json();
+        status.innerText = `${allSprites.length} compatible sprites found.`;
+        renderGrid(allSprites);
+      } catch (err) {
+        status.innerText = "Error: " + err.message;
+        console.error(err);
+      }
+    }
+
+    function renderGrid(list) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="sprite-name">${item.name}</div>
+          <div class="dimensions">${item.w}×${item.h} beads</div>
+        `;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = item.w * scale;
+        canvas.height = item.h * scale;
+        const ctx = canvas.getContext('2d');
+
+        item.pixels.forEach((row, y) => {
+          row.forEach((pixel, x) => {
+            if (pixel) {
+              ctx.fillStyle = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+              ctx.fillRect(x * scale, y * scale, scale - 1, scale - 1);
+            }
+          });
+        });
+
+        card.appendChild(canvas);
+        grid.appendChild(card);
+      });
+    }
+
+    function filterSprites() {
+      const q = document.getElementById('search').value.toLowerCase();
+      const filtered = allSprites.filter(s => s.name.toLowerCase().includes(q));
+      renderGrid(filtered);
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

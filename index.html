@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pokémon Bead Art Studio (Pärlplatta ≤ 29×29)</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --border: #333;
+      --text: #eee;
+      --muted: #888;
+      --accent: #ffcb05;
+      --accent-blue: #2563eb;
+      --danger: #dc2626;
+      --board-bg-dark: #141414;
+      --board-bg-light: #ececee;
+    }
+    * { box-sizing: border-box; touch-action: manipulation; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+    }
+    header {
+      background: var(--card-bg);
+      padding: 16px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .header-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      margin: 0;
+      color: var(--accent);
+      font-size: 1.5rem;
+      letter-spacing: -0.5px;
+    }
+    .status-text {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    input, select, button {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    input[type="text"] {
+      min-width: 220px;
+    }
+    button {
+      background: var(--accent-blue);
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s ease;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    #grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 12px 10px;
+      border-radius: 8px;
+      text-align: center;
+      width: 160px;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      user-select: none;
+    }
+    .card:hover {
+      border-color: #666;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    .card-title {
+      font-weight: 600;
+      text-transform: capitalize;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-dim {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .card canvas {
+      display: block;
+      margin: 0 auto;
+      border-radius: 4px;
+    }
+
+    /* iPad Crafting Fullscreen Modal */
+    #fullscreen-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #0d0d0d;
+      z-index: 1000;
+      flex-direction: column;
+      padding: 12px 16px;
+    }
+    #fullscreen-modal.active {
+      display: flex;
+    }
+    #modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    #modal-title {
+      font-size: 1.35rem;
+      font-weight: bold;
+      text-transform: capitalize;
+      color: var(--accent);
+    }
+    .modal-controls-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 0;
+      border-bottom: 1px solid #222;
+      flex-shrink: 0;
+      background: #141414;
+      margin-top: 6px;
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+    .tool-btn {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+    }
+    .tool-btn.active {
+      background: #374151;
+      border-color: #60a5fa;
+      color: #93c5fd;
+    }
+    .exit-btn {
+      background: var(--danger);
+      padding: 8px 16px;
+      font-size: 0.95rem;
+    }
+    .exit-btn:hover {
+      background: #b91c1c;
+    }
+
+    #modal-body {
+      flex: 1;
+      display: flex;
+      gap: 16px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    #canvas-holder {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #333;
+      border-radius: 8px;
+      overflow: auto;
+      padding: 16px;
+      transition: background-color 0.2s ease;
+    }
+    #canvas-holder.bg-dark {
+      background: var(--board-bg-dark);
+    }
+    #canvas-holder.bg-light {
+      background: var(--board-bg-light);
+    }
+    #fsCanvas {
+      image-rendering: pixelated;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Bill of Materials (BOM) sidebar */
+    #bom-sidebar {
+      width: 320px;
+      background: #181818;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      overflow-y: auto;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    #bom-sidebar h3 {
+      margin: 0 0 6px 0;
+      font-size: 1.05rem;
+      color: #fff;
+    }
+    #bom-hint {
+      font-size: 0.75rem;
+      color: #aaa;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    #bom-total {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .bom-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+    }
+    .bom-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #202020;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      border: 1px solid transparent;
+      transition: border-color 0.15s ease;
+    }
+    .bom-row:hover {
+      border-color: #444;
+    }
+    .bom-color-swatch-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 5px;
+      border: 2px solid #555;
+      padding: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .bom-color-picker-input {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .bom-name {
+      flex: 1;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .bom-count {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+    .bom-reset-btn {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #999;
+      display: none;
+    }
+    .bom-row.customized .bom-reset-btn {
+      display: inline-block;
+    }
+
+    @media (max-width: 860px) {
+      #modal-body {
+        flex-direction: column;
+      }
+      #bom-sidebar {
+        width: 100%;
+        max-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title-row">
+      <h1>Pokémon Pärlplatta Studio (≤ 29×29)</h1>
+      <span id="status" class="status-text">Loading catalog...</span>
+    </div>
+    <div class="control-row">
+      <input type="text" id="search" placeholder="Search Pokémon (e.g. Pikachu, Eevee)..." oninput="filterCatalog()">
+      
+      <label>
+        Style:
+        <select id="beadShape" onchange="syncControls('beadShape', this.value)">
+          <option value="donut">Beads (Hollow Rings)</option>
+          <option value="square">Pixels (Squares)</option>
+        </select>
+      </label>
+
+      <label>
+        Gap:
+        <input type="range" id="gapSize" min="0" max="6" value="2" oninput="syncControls('gapSize', this.value)">
+      </label>
+
+      <label>
+        Palette:
+        <select id="paletteMode" onchange="syncControls('paletteMode', this.value)">
+          <option value="original">Original Game Colors</option>
+          <option value="basic12">Home Stash (Basic 12)</option>
+          <option value="hama">Hama Midi Classic (30)</option>
+        </select>
+      </label>
+
+      <label>
+        Background:
+        <select id="boardBg" onchange="syncControls('boardBg', this.value)">
+          <option value="dark">Dark Background</option>
+          <option value="light">Light Background (Highlight Outlines)</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <div id="grid"></div>
+
+  <!-- iPad Crafting Fullscreen Modal -->
+  <div id="fullscreen-modal">
+    <div id="modal-header">
+      <div id="modal-title">Sprite Focus</div>
+      <div>
+        <button class="exit-btn" onclick="closeFullscreen()">✕ Exit</button>
+      </div>
+    </div>
+
+    <!-- In-Zoom Controls Toolbar -->
+    <div class="modal-controls-bar">
+      <label>
+        Palette:
+        <select id="modalPaletteMode" onchange="syncControls('paletteMode', this.value)">
+          <option value="original">Original Game Colors</option>
+          <option value="basic12">Home Stash (Basic 12)</option>
+          <option value="hama">Hama Midi Classic (30)</option>
+        </select>
+      </label>
+
+      <label>
+        Style:
+        <select id="modalBeadShape" onchange="syncControls('beadShape', this.value)">
+          <option value="donut">Beads (Hollow Rings)</option>
+          <option value="square">Pixels (Squares)</option>
+        </select>
+      </label>
+
+      <label>
+        Gap:
+        <input type="range" id="modalGapSize" min="0" max="6" value="2" oninput="syncControls('gapSize', this.value)">
+      </label>
+
+      <label>
+        Board BG:
+        <select id="modalBoardBg" onchange="syncControls('boardBg', this.value)">
+          <option value="dark">Dark</option>
+          <option value="light">Light (Visible Outlines)</option>
+        </select>
+      </label>
+
+      <button id="btnPegLines" class="tool-btn active" onclick="togglePegLines()">Grid (Every 5)</button>
+      <button id="btnCoords" class="tool-btn" onclick="toggleCoordinates()">Coords (1-29)</button>
+      <button id="btnZoomOut" class="tool-btn" onclick="adjustZoom(-4)">Zoom -</button>
+      <button id="btnZoomIn" class="tool-btn" onclick="adjustZoom(4)">Zoom +</button>
+    </div>
+
+    <div id="modal-body">
+      <div id="canvas-holder" class="bg-dark">
+        <canvas id="fsCanvas"></canvas>
+      </div>
+      <div id="bom-sidebar">
+        <h3>Bead Count & Palette</h3>
+        <div id="bom-hint">Click any color swatch to remap this bead color to custom stash!</div>
+        <div id="bom-total">Total beads: calculating...</div>
+        <div id="bom-list" class="bom-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let catalog = [];
+    let activePokemon = null;
+    let showPegLines = true;
+    let showCoordinates = false;
+    let customPitch = 26; // Base pitch for fullscreen canvas
+    let boardBgMode = 'dark'; // 'dark' or 'light'
+    let currentShape = 'donut';
+    let currentGap = 2;
+    let currentPalette = 'original';
+
+    // User-overridden colors map: key (e.g. "rgb(0,0,0)" or color name) -> hex/rgb override
+    const colorOverrides = {};
+
+    // Basic 12 color home stash
+    const HOME_PALETTE_12 = [
+      { name: "White", rgb: [255, 255, 255] },
+      { name: "Black", rgb: [10, 10, 10] },
+      { name: "Yellow", rgb: [250, 220, 45] },
+      { name: "Red", rgb: [215, 30, 40] },
+      { name: "Dark Blue", rgb: [25, 60, 155] },
+      { name: "Light Blue", rgb: [95, 185, 245] },
+      { name: "Green", rgb: [35, 140, 50] },
+      { name: "Light Green", rgb: [120, 205, 75] },
+      { name: "Orange", rgb: [245, 120, 25] },
+      { name: "Pink", rgb: [245, 130, 175] },
+      { name: "Purple", rgb: [125, 45, 140] },
+      { name: "Brown", rgb: [110, 60, 35] },
+      { name: "Grey", rgb: [130, 130, 130] }
+    ];
+
+    // Standard popular Hama Midi assortment (30 colors)
+    const HAMA_MIDI_PALETTE = [
+      { name: "01 White", rgb: [255, 255, 255] },
+      { name: "02 Cream", rgb: [245, 235, 195] },
+      { name: "03 Yellow", rgb: [255, 225, 0] },
+      { name: "04 Orange", rgb: [245, 110, 0] },
+      { name: "05 Red", rgb: [210, 20, 35] },
+      { name: "06 Pink", rgb: [245, 125, 160] },
+      { name: "07 Purple", rgb: [130, 45, 135] },
+      { name: "08 Blue", rgb: [10, 75, 165] },
+      { name: "09 Light Blue", rgb: [70, 165, 230] },
+      { name: "10 Green", rgb: [0, 145, 65] },
+      { name: "11 Light Green", rgb: [115, 200, 70] },
+      { name: "12 Brown", rgb: [95, 50, 30] },
+      { name: "17 Grey", rgb: [135, 135, 135] },
+      { name: "18 Black", rgb: [15, 15, 15] },
+      { name: "20 Red Brown", rgb: [160, 50, 30] },
+      { name: "21 Light Brown", rgb: [180, 110, 60] },
+      { name: "22 Dark Red", rgb: [140, 15, 30] },
+      { name: "26 Peach", rgb: [250, 195, 170] },
+      { name: "27 Tan", rgb: [220, 175, 135] },
+      { name: "28 Dark Green", rgb: [0, 90, 50] },
+      { name: "29 Wine Red", rgb: [115, 20, 50] },
+      { name: "30 Burgundy", rgb: [90, 15, 45] },
+      { name: "31 Turquoise", rgb: [0, 160, 175] },
+      { name: "43 Pastel Yellow", rgb: [255, 245, 145] },
+      { name: "44 Pastel Red", rgb: [250, 140, 140] },
+      { name: "45 Pastel Purple", rgb: [195, 150, 205] },
+      { name: "46 Pastel Blue", rgb: [135, 190, 235] },
+      { name: "47 Pastel Green", rgb: [145, 220, 160] },
+      { name: "48 Pastel Pink", rgb: [255, 190, 210] },
+      { name: "70 Light Grey", rgb: [190, 190, 190] },
+      { name: "71 Dark Grey", rgb: [75, 75, 75] }
+    ];
+
+    function rgbToHex(rgb) {
+      return "#" + rgb.map(x => {
+        const h = Math.max(0, Math.min(255, Math.round(x))).toString(16);
+        return h.length === 1 ? '0' + h : h;
+      }).join('');
+    }
+
+    function hexToRgb(hex) {
+      let c = hex.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const num = parseInt(c, 16);
+      return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+    }
+
+    async function init() {
+      const status = document.getElementById('status');
+      try {
+        const res = await fetch('sprites_29x29.json');
+        if (!res.ok) throw new Error("Manifest sprites_29x29.json not found.");
+        catalog = await res.json();
+        status.innerText = `${catalog.length} Pokémon ready (≤ 29×29). Tap any to open iPad crafting view.`;
+        renderCatalog(catalog);
+      } catch (err) {
+        status.innerText = "Error: " + err.message;
+        console.error(err);
+      }
+    }
+
+    // Weighted Euclidean perception matching (redmean)
+    function quantize(rgb, palette) {
+      let minDistance = Infinity;
+      let matched = palette[0];
+      const r1 = rgb[0], g1 = rgb[1], b1 = rgb[2];
+      
+      for (const p of palette) {
+        const r2 = p.rgb[0], g2 = p.rgb[1], b2 = p.rgb[2];
+        const rbar = (r1 + r2) / 2;
+        const dr = r1 - r2;
+        const dg = g1 - g2;
+        const db = b1 - b2;
+        const dist = (2 + rbar / 256) * (dr * dr) + 4 * (dg * dg) + (2 + (255 - rbar) / 256) * (db * db);
+        if (dist < minDistance) {
+          minDistance = dist;
+          matched = p;
+        }
+      }
+      return matched;
+    }
+
+    function getResolvedColor(pixel, paletteMode) {
+      let activePalette = null;
+      if (paletteMode === "basic12") activePalette = HOME_PALETTE_12;
+      else if (paletteMode === "hama") activePalette = HAMA_MIDI_PALETTE;
+
+      let key, name, rgb;
+      if (activePalette) {
+        const match = quantize(pixel, activePalette);
+        key = match.name;
+        name = match.name;
+        rgb = match.rgb;
+      } else {
+        key = `${pixel[0]},${pixel[1]},${pixel[2]}`;
+        name = `RGB(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+        rgb = pixel;
+      }
+
+      // Check if user has an active interactive color override
+      if (colorOverrides[key]) {
+        return { key, name, rgb: colorOverrides[key], overridden: true };
+      }
+      return { key, name, rgb, overridden: false };
+    }
+
+    function syncControls(prop, value) {
+      if (prop === 'beadShape') {
+        currentShape = value;
+        document.getElementById('beadShape').value = value;
+        document.getElementById('modalBeadShape').value = value;
+      } else if (prop === 'gapSize') {
+        currentGap = parseInt(value, 10);
+        document.getElementById('gapSize').value = value;
+        document.getElementById('modalGapSize').value = value;
+      } else if (prop === 'paletteMode') {
+        currentPalette = value;
+        document.getElementById('paletteMode').value = value;
+        document.getElementById('modalPaletteMode').value = value;
+      } else if (prop === 'boardBg') {
+        boardBgMode = value;
+        document.getElementById('boardBg').value = value;
+        document.getElementById('modalBoardBg').value = value;
+        const holder = document.getElementById('canvas-holder');
+        holder.className = boardBgMode === 'light' ? 'bg-light' : 'bg-dark';
+      }
+      refreshCurrentView();
+    }
+
+    function renderSpriteToCanvas(canvas, item, pitch, shape, gap, paletteMode, withLabels = false) {
+      const w = item.w;
+      const h = item.h;
+      const margin = withLabels ? 22 : 0;
+      
+      canvas.width = w * pitch + margin;
+      canvas.height = h * pitch + margin;
+      const ctx = canvas.getContext('2d');
+
+      const isLight = boardBgMode === 'light';
+      const boardBgColor = isLight ? "#ececee" : "#141414";
+      const gridLineColor = isLight ? "rgba(0, 0, 0, 0.35)" : "rgba(255, 255, 255, 0.28)";
+      const axisTextColor = isLight ? "#444" : "#888";
+
+      // Board background
+      ctx.fillStyle = boardBgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Coordinate axes
+      if (withLabels) {
+        ctx.fillStyle = axisTextColor;
+        ctx.font = "bold 10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        // Top X labels
+        for (let x = 0; x < w; x++) {
+          if ((x + 1) % 5 === 0 || x === 0 || x === w - 1) {
+            ctx.fillText(x + 1, margin + x * pitch + pitch / 2, 11);
+          }
+        }
+        // Left Y labels
+        for (let y = 0; y < h; y++) {
+          if ((y + 1) % 5 === 0 || y === 0 || y === h - 1) {
+            ctx.fillText(y + 1, 11, margin + y * pitch + pitch / 2);
+          }
+        }
+      }
+
+      // Draw beads / pixels
+      item.pixels.forEach((row, y) => {
+        row.forEach((pixel, x) => {
+          if (!pixel) return;
+
+          const resolved = getResolvedColor(pixel, paletteMode);
+          const colorRgb = resolved.rgb;
+
+          const px = margin + x * pitch;
+          const py = margin + y * pitch;
+          const size = Math.max(2, pitch - gap);
+
+          ctx.fillStyle = `rgb(${colorRgb[0]}, ${colorRgb[1]}, ${colorRgb[2]})`;
+
+          if (shape === "donut") {
+            const radius = size / 2;
+            const centerX = px + pitch / 2;
+            const centerY = py + pitch / 2;
+
+            // Outer bead body
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, Math.max(1, radius), 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3D bead rim contrast
+            ctx.strokeStyle = isLight ? "rgba(0, 0, 0, 0.18)" : "rgba(0, 0, 0, 0.32)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Center peg hole matches background
+            ctx.fillStyle = boardBgColor;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, Math.max(0.7, radius * 0.38), 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // Square pixel mode
+            ctx.fillRect(px + gap / 2, py + gap / 2, size, size);
+          }
+        });
+      });
+
+      // Accent lines every 5 pegs for easy counting
+      if (showPegLines && pitch >= 14) {
+        ctx.strokeStyle = gridLineColor;
+        ctx.lineWidth = 1.2;
+
+        // Vertical lines
+        for (let x = 0; x <= w; x += 5) {
+          const lx = margin + x * pitch;
+          ctx.beginPath();
+          ctx.moveTo(lx, margin);
+          ctx.lineTo(lx, canvas.height);
+          ctx.stroke();
+        }
+        // Horizontal lines
+        for (let y = 0; y <= h; y += 5) {
+          const ly = margin + y * pitch;
+          ctx.beginPath();
+          ctx.moveTo(margin, ly);
+          ctx.lineTo(canvas.width, ly);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function renderCatalog(list) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.onclick = () => openFullscreen(item);
+
+        card.innerHTML = `
+          <div class="card-title" title="${item.name}">${item.name}</div>
+          <div class="card-dim">${item.w}×${item.h} beads</div>
+        `;
+
+        const canvas = document.createElement('canvas');
+        renderSpriteToCanvas(canvas, item, 5, currentShape, Math.min(currentGap, 1), currentPalette, false);
+        card.appendChild(canvas);
+        grid.appendChild(card);
+      });
+    }
+
+    function filterCatalog() {
+      const q = document.getElementById('search').value.toLowerCase();
+      const filtered = catalog.filter(s => s.name.toLowerCase().includes(q));
+      renderCatalog(filtered);
+    }
+
+    function calculateBOM(item, paletteMode) {
+      const counts = {};
+      let totalBeads = 0;
+
+      item.pixels.forEach(row => {
+        row.forEach(pixel => {
+          if (!pixel) return;
+          totalBeads++;
+          const resolved = getResolvedColor(pixel, paletteMode);
+
+          if (!counts[resolved.key]) {
+            counts[resolved.key] = {
+              key: resolved.key,
+              name: resolved.name,
+              rgb: resolved.rgb,
+              overridden: resolved.overridden,
+              count: 0
+            };
+          }
+          counts[resolved.key].count++;
+        });
+      });
+
+      const sorted = Object.values(counts).sort((a, b) => b.count - a.count);
+      return { totalBeads, items: sorted };
+    }
+
+    function updateBOMView() {
+      if (!activePokemon) return;
+      const bom = calculateBOM(activePokemon, currentPalette);
+
+      document.getElementById('bom-total').innerText = `Total Beads: ${bom.totalBeads} (${activePokemon.w}×${activePokemon.h} grid)`;
+      const listContainer = document.getElementById('bom-list');
+      listContainer.innerHTML = '';
+
+      bom.items.forEach(colorItem => {
+        const row = document.createElement('div');
+        row.className = 'bom-row' + (colorItem.overridden ? ' customized' : '');
+
+        // Interactive color swatch button with embedded native color picker
+        const swatchBtn = document.createElement('button');
+        swatchBtn.className = 'bom-color-swatch-btn';
+        swatchBtn.style.backgroundColor = `rgb(${colorItem.rgb[0]}, ${colorItem.rgb[1]}, ${colorItem.rgb[2]})`;
+        swatchBtn.title = "Click to pick a custom replacement bead color";
+
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.className = 'bom-color-picker-input';
+        colorInput.value = rgbToHex(colorItem.rgb);
+
+        colorInput.oninput = (e) => {
+          const newHex = e.target.value;
+          const newRgb = hexToRgb(newHex);
+          colorOverrides[colorItem.key] = newRgb;
+          swatchBtn.style.backgroundColor = newHex;
+          row.classList.add('customized');
+          drawFullscreen();
+          renderCatalog(catalog);
+        };
+
+        swatchBtn.appendChild(colorInput);
+
+        const nameSpan = document.createElement('div');
+        nameSpan.className = 'bom-name';
+        nameSpan.innerText = colorItem.name + (colorItem.overridden ? ' (Custom)' : '');
+        nameSpan.title = colorItem.name;
+
+        const countSpan = document.createElement('div');
+        countSpan.className = 'bom-count';
+        countSpan.innerText = `×${colorItem.count}`;
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'bom-reset-btn';
+        resetBtn.innerText = 'Reset';
+        resetBtn.title = 'Reset to original palette color';
+        resetBtn.onclick = (e) => {
+          e.stopPropagation();
+          delete colorOverrides[colorItem.key];
+          drawFullscreen();
+          updateBOMView();
+          renderCatalog(catalog);
+        };
+
+        row.appendChild(swatchBtn);
+        row.appendChild(nameSpan);
+        row.appendChild(countSpan);
+        row.appendChild(resetBtn);
+        listContainer.appendChild(row);
+      });
+    }
+
+    function openFullscreen(item) {
+      activePokemon = item;
+      document.getElementById('modal-title').innerText = `${item.name} (${item.w}×${item.h} beads)`;
+      document.getElementById('fullscreen-modal').classList.add('active');
+      drawFullscreen();
+      updateBOMView();
+    }
+
+    function closeFullscreen() {
+      document.getElementById('fullscreen-modal').classList.remove('active');
+      activePokemon = null;
+    }
+
+    function drawFullscreen() {
+      if (!activePokemon) return;
+      const fsCanvas = document.getElementById('fsCanvas');
+      renderSpriteToCanvas(fsCanvas, activePokemon, customPitch, currentShape, currentGap, currentPalette, showCoordinates);
+    }
+
+    function togglePegLines() {
+      showPegLines = !showPegLines;
+      document.getElementById('btnPegLines').classList.toggle('active', showPegLines);
+      drawFullscreen();
+    }
+
+    function toggleCoordinates() {
+      showCoordinates = !showCoordinates;
+      document.getElementById('btnCoords').classList.toggle('active', showCoordinates);
+      drawFullscreen();
+    }
+
+    function adjustZoom(delta) {
+      customPitch = Math.max(12, Math.min(52, customPitch + delta));
+      drawFullscreen();
+    }
+
+    function refreshCurrentView() {
+      filterCatalog();
+      if (activePokemon) {
+        drawFullscreen();
+        updateBOMView();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
